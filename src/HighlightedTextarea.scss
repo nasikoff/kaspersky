@@ -1,0 +1,39 @@
+// HighlightedTextarea.scss
+.highlighted-textarea-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+
+  .highlighted-text {
+      padding: 12px;
+      border: 1px solid #d9d9d9;
+      background-color: #fff;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: monospace;
+      font-size: 14px;
+      color: black;
+      overflow-y: auto;
+      pointer-events: none;
+
+      .keyword {
+          color: red;
+      }
+
+      .key {
+          color: blue;
+      }
+
+      .string {
+          color: darkmagenta;
+      }
+  }
+
+  textarea {
+      font-family: monospace;
+      font-size: 14px;
+      position: relative;
+      z-index: 1;
+      background-color: transparent;
+  }
+}

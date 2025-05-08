@@ -1,62 +1,97 @@
-// HighlightedTextarea.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { Input } from 'antd';
-import Prism from 'prismjs';
-import 'prismjs/themes/prism.css';
 import './HighlightedTextarea.scss';
 
 const { TextArea } = Input;
 
-interface HighlightedTextareaProps {}
+interface HighlightedTextareaProps {
+}
 
 const HighlightedTextarea: React.FC<HighlightedTextareaProps> = () => {
-    const [text, setText] = useState<string>('');
-    const highlightedTextRef = useRef<HTMLDivElement>(null);
+  const [value, setValue] = useState<string>('');
+  const [highlightedValue, setHighlightedValue] = useState<string>('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    useEffect(() => {
-        if (highlightedTextRef.current) {
-            highlight();
+  useEffect(() => {
+    highlightText();
+  }, [value]);
+
+  const highlightText = () => {
+    const parts = splitText(value);
+    const highlighted = parts
+      .map(part => {
+        if (isLogicOperator(part)) {
+          return `<span class="logic-operator">${part}</span>`;
+        } else if (isKeyValuePair(part)) {
+          const [key, value] = part.split("=");
+          const cleanKey = key.replace(/["“”]/g, '');
+          return `<span class="key">${cleanKey}</span>=<span class="value">${value}</span>`;
+        } else if (isInsideQuotes(part)) {
+          return `<span class="value">${part}</span>`;
+        } else {
+          return part;
         }
-    }, [text]);
+      })
+      .join('');
+    setHighlightedValue(highlighted);
+  };
 
-    const highlight = () => {
-        if (!highlightedTextRef.current) return;
+  const splitText = (text: string): string[] => {
+    const regex = /(\b(?:AND|OR|NOT)\b|TI=["“”][^"“”]*["“”]|URL=["“”][^"“”]*["“”]|DP=["“”][^"“”]*["“”]|AB=["“”][^"“”]*["“”]|["“”][^"“”]*["“”]|TI|URL|DP|AB)/g;
+    const parts: string[] = [];
+    let match;
+    let lastIndex = 0;
 
-        Prism.languages.customLanguage = {
-            'keyword': /\b(OR|AND|NOT)\b/,
-            'key': /(TI=|AB=|DP=|URL=)/,
-            'string': /[\u0022\u201C\u201D](?:[^\\\u0022\u201C\u201D]|\\.)*[\u0022\u201C\u201D]/,
-        };
+    while ((match = regex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push(text.substring(lastIndex, match.index));
+      }
+      parts.push(match[0]);
+      lastIndex = regex.lastIndex;
+    }
 
-        const highlightedText = Prism.highlight(text, Prism.languages.customLanguage, 'customLanguage');
+    if (lastIndex < text.length) {
+      parts.push(text.substring(lastIndex));
+    }
 
-        const addClasses = (html: string) => {
-            let result = html;
-            result = result.replace(/<span class="token keyword">/g, '<span class="token keyword custom-keyword">');
-            result = result.replace(/<span class="token key">/g, '<span class="token key custom-key">');
-            result = result.replace(/<span class="token string">/g, '<span class="token string custom-string">');
-            return result;
-        };
+    return parts;
+  };
 
-        highlightedTextRef.current.innerHTML = addClasses(highlightedText);
-    };
 
-    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-        setText(e.target.value);
-    };
+  const isLogicOperator = (text: string): boolean => {
+    return /^(AND|OR|NOT)$/i.test(text);
+  };
 
-    return (
-        <div className="highlighted-textarea-container">
-            <TextArea
-                value={text}
-                onChange={handleChange}
-                placeholder="Введите текст..."
-                autoSize={{ minRows: 3, maxRows: 5 }}
-                style={{ resize: 'none' }}
-            />
-            <div className="highlighted-text" ref={highlightedTextRef}></div>
-        </div>
-    );
+  const isKeyValuePair = (text: string): boolean => {
+    return /^(TI|URL|DP|AB)=["“”][^"“”]*["“”]$/.test(text);
+  };
+
+  const isInsideQuotes = (text: string): boolean => {
+    return /^["“”][^"“”]*["“”]$/.test(text);
+  };
+
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setValue(e.target.value);
+  };
+
+  return (
+    <div className="highlighted-textarea">
+      <div className="textarea-wrapper">
+        <TextArea
+          ref={textareaRef}
+          value={value}
+          onChange={handleChange}
+          rows={10}
+          className="real-textarea"
+        />
+        <div
+          className="highlight-overlay"
+          dangerouslySetInnerHTML={{ __html: highlightedValue }}
+        />
+      </div>
+    </div>
+  );
 };
 
 export default HighlightedTextarea;
